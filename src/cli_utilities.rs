@@ -1,4 +1,4 @@
-use crate::end_events::start_end_event;
+use crate::end_events::{start_end_event, start_end_event_with_duration};
 use crate::input_handler;
 use crate::message_creator::{
     generate_print_message_before_additional_break, generate_print_message_before_break,
@@ -7,6 +7,7 @@ use crate::message_creator::{
 use crate::pomo_info::PomoInfo;
 use crate::pomodoro_options::PomodoroOptions;
 use crate::timer::Timer;
+use crate::end_events::EndEvent;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::debug;
 use std::ops::ControlFlow;
@@ -91,7 +92,25 @@ pub(crate) fn start_pomodoro(options: &PomodoroOptions) {
                 }
                 let print_message = generate_print_message_before_break(&pomo_info, &options);
                 println!("{}", print_message);
-                execute_timer(pomo_info.break_duration, &receiver, end_event);
+
+                // Check if any end event is LockScreen
+                let is_lock_screen = matches!(options.end_event_pomodoro, EndEvent::LockScreen)
+                    || matches!(options.end_event_additional_pomodoro, EndEvent::LockScreen);
+
+                if is_lock_screen && options.enforce_lock_screen {
+                    // Enforce mode: continuously lock screen during break (re-lock if unlocked)
+                    println!("Locking screen for break. Screen will re-lock if unlocked before break ends.");
+                    start_end_event_with_duration(&EndEvent::LockScreen, pomo_info.break_duration);
+                    println!("Break finished!");
+                } else if is_lock_screen && !options.enforce_lock_screen {
+                    // Non-enforce mode: lock once at start, then run normal timer
+                    println!("Locking screen for break.");
+                    start_end_event(&EndEvent::LockScreen);
+                    execute_timer(pomo_info.break_duration, &receiver, end_event);
+                } else {
+                    // No lock screen event
+                    execute_timer(pomo_info.break_duration, &receiver, end_event);
+                }
             }
         } else {
             break;

@@ -113,6 +113,26 @@ Install Rust by following the instructions on the [Rust website](https://www.rus
 
 3. Use the executable which can be found in the `target/release` directory.
 
+### Creating Releases
+
+The project uses GitHub Actions to automatically build cross-platform binaries. To create a new release:
+
+1. Create and push a new tag:
+   ```sh
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+2. GitHub Actions will automatically:
+   - Build binaries for Linux (x86_64, ARM64), Windows (x86_64), and macOS (x86_64, ARM64)
+   - Create SHA256 checksums for all binaries
+   - Create a GitHub release with all artifacts
+
+The following platforms are supported:
+- **Linux**: `x86_64` and `aarch64` (ARM64)
+- **Windows**: `x86_64`
+- **macOS**: `x86_64` (Intel) and `aarch64` (Apple Silicon)
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
@@ -157,14 +177,18 @@ The default settings are as follows:
         "sound": {
             "filepathSound": ""
         }
-    }
+    },
+    // Flag indicating whether to enforce screen locking during breaks.
+    // If true, the screen will be continuously re-locked if unlocked during a break.
+    // If false, the screen will only be locked once at the start of the break.
+    "enforceLockScreen": true
 }
 ```
 
 For the `endEventPomodoro` and `endEventAdditionalPomodoro` fields, the following options are available:
 
-- `sound`: Play a sound file. The path to the sound file must be provided in the `filepathSound` field. If the path is empty, the default sound will be played.
-- `lockScreen`: Lock the screen. This feature is currently only available on Windows.
+- `sound`: Play a sound file. The path to the sound file can be provided in the `filepathSound` field. If the path is empty or the file doesn't exist, an embedded default alarm sound will be played. A warning will be printed if a specified file path is invalid.
+- `lockScreen`: Lock the screen during breaks. Available on Windows, Linux, and macOS. When `enforceLockScreen` is `true`, the screen will be continuously re-locked if the user tries to unlock it before the break ends. When `false`, the screen locks once at the start of the break.
 
 _For more details, please refer to the [Documentation](https://docs.rs/crate/locking-pomodoro-timer/latest)_
 

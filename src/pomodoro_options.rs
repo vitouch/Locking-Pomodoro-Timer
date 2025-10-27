@@ -37,6 +37,15 @@ pub struct PomodoroOptions {
     pub interval_reminder_after_break: i32,
     /// The event to be executed after the reminder interval after a break ends.
     pub event_reminder_after_break: EndEvent,
+    /// Flag indicating whether to enforce screen locking during breaks.
+    /// If true, the screen will be continuously re-locked if unlocked during a break.
+    /// If false, the screen will only be locked once at the start of the break.
+    #[serde(default = "default_enforce_lock_screen")]
+    pub enforce_lock_screen: bool,
+}
+
+fn default_enforce_lock_screen() -> bool {
+    true
 }
 
 /// Error type for verification errors of `PomodoroOptions`.
@@ -66,13 +75,14 @@ impl Default for PomodoroOptions {
             auto_start_pomodoro: true,
             interval_long_break: 4,
             end_event_pomodoro: EndEvent::Sound {
-                filepath_sound: PathBuf::new(),
+                filepath_sound: None,
             },
             end_event_additional_pomodoro: EndEvent::LockScreen,
             interval_reminder_after_break: 5,
             event_reminder_after_break: EndEvent::Sound {
-                filepath_sound: PathBuf::new(),
+                filepath_sound: None,
             },
+            enforce_lock_screen: true,
         }
     }
 }
@@ -96,14 +106,19 @@ impl PomodoroOptions {
         if self.duration_long_break < 0 {
             return Err(VerificationError::InvalidLongBreakDuration);
         }
+        // Validate sound files - only check if filepath is provided and not empty
         if let EndEvent::Sound { filepath_sound } = &self.end_event_pomodoro {
-            if !PathBuf::from(&filepath_sound).is_file() && !filepath_sound.as_os_str().is_empty() {
-                return Err(VerificationError::InvalidSoundFile);
+            if let Some(path) = filepath_sound {
+                if !path.as_os_str().is_empty() && !path.is_file() {
+                    return Err(VerificationError::InvalidSoundFile);
+                }
             }
         }
         if let EndEvent::Sound { filepath_sound } = &self.end_event_additional_pomodoro {
-            if !PathBuf::from(&filepath_sound).is_file() && !filepath_sound.as_os_str().is_empty() {
-                return Err(VerificationError::InvalidSoundFile);
+            if let Some(path) = filepath_sound {
+                if !path.as_os_str().is_empty() && !path.is_file() {
+                    return Err(VerificationError::InvalidSoundFile);
+                }
             }
         }
 
@@ -145,12 +160,12 @@ pub fn read_options_from_json(filepath_json: Option<PathBuf>) -> Result<Pomodoro
     match data.verify() {
         Ok(_) => (),
         Err(VerificationError::InvalidSoundFile) => {
-            println!("Sound file does not exist. Using default sound.");
+            println!("Sound file does not exist. Using internal default sound.");
             if let EndEvent::Sound { filepath_sound } = &mut data.end_event_pomodoro {
-                *filepath_sound = PathBuf::new();
+                *filepath_sound = None;
             }
             if let EndEvent::Sound { filepath_sound } = &mut data.end_event_additional_pomodoro {
-                *filepath_sound = PathBuf::new();
+                *filepath_sound = None;
             }
         }
         Err(e) => return Err(e.into()),

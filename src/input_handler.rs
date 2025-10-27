@@ -60,7 +60,7 @@ fn process_key_event(sender: &std::sync::mpsc::Sender<String>) -> bool {
     let mut exit = false;
     if let Ok(Event::Key(key_event)) = read() {
         debug!("Received key event: {:?}", key_event);
-        if key_event.kind != crossterm::event::KeyEventKind::Press {
+        if key_event.kind == crossterm::event::KeyEventKind::Press {
             if key_event.code == KeyCode::Char('c')
                 && key_event.modifiers == crossterm::event::KeyModifiers::CONTROL
             {
